@@ -10,12 +10,13 @@ export class SceneManager {
   private animFrameId = 0
   private lastTime = 0
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, gridSize = 12) {
     this.scene = new THREE.Scene()
     this.scene.background = new THREE.Color(0x87ceeb)
 
+    const camDistance = gridSize * 0.85
     this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000)
-    this.camera.position.set(10, 12, 10)
+    this.camera.position.set(camDistance, camDistance, camDistance)
     this.camera.lookAt(0, 0, 0)
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
@@ -27,25 +28,26 @@ export class SceneManager {
     this.controls.target.set(0, 0, 0)
     this.controls.maxPolarAngle = Math.PI / 2.2
     this.controls.minDistance = 5
-    this.controls.maxDistance = 30
+    this.controls.maxDistance = gridSize * 2.5
     this.controls.update()
 
-    this.setupLights()
+    this.setupLights(gridSize)
   }
 
-  private setupLights(): void {
+  private setupLights(gridSize: number): void {
     const ambient = new THREE.AmbientLight(0xffffff, 0.6)
     this.scene.add(ambient)
 
+    const half = gridSize / 2 + 3
     const sun = new THREE.DirectionalLight(0xffffff, 1.2)
-    sun.position.set(10, 20, 10)
+    sun.position.set(gridSize * 0.85, gridSize * 1.7, gridSize * 0.85)
     sun.castShadow = true
     sun.shadow.camera.near = 0.1
-    sun.shadow.camera.far = 60
-    sun.shadow.camera.left = -15
-    sun.shadow.camera.right = 15
-    sun.shadow.camera.top = 15
-    sun.shadow.camera.bottom = -15
+    sun.shadow.camera.far = gridSize * 5
+    sun.shadow.camera.left = -half
+    sun.shadow.camera.right = half
+    sun.shadow.camera.top = half
+    sun.shadow.camera.bottom = -half
     this.scene.add(sun)
   }
 
