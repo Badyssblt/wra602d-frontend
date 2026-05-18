@@ -4,6 +4,7 @@ import { computePopulation, computeScore } from '../game/CityState'
 import type { DemandState } from '../game/DemandSystem'
 import type { GridState } from '../game/Grid'
 import type { IncomeRates } from '../game/IncomeSystem'
+import type { PendingWave } from '../game/DisasterSystem'
 import { GameEngine, type CellAction } from '../core/GameEngine'
 import { useToast } from './useToast'
 
@@ -14,6 +15,11 @@ export const GRID_SIZE = TILES_PER_SIDE * TILE_SIZE
 export const STARTING_MONEY = 50_000
 export const TILE_PRICE = 15_000
 
+/** Defeat threshold: city is bankrupt below this many euros. */
+export const DEFEAT_MONEY_FLOOR = -10_000
+/** Seconds the city must stay below {@link DEFEAT_MONEY_FLOOR} before defeat. */
+export const DEFEAT_SUSTAINED_S = 25
+
 const DERIVED_REFRESH_INTERVAL_S = 1
 
 export interface CitySnapshot {
@@ -23,6 +29,10 @@ export interface CitySnapshot {
   gridSize: number
   buildings: GridState['buildings']
   unlockedTiles: GridState['unlockedTiles']
+  /** Player-side score at save time. Server upserts the leaderboard from this. */
+  score: number
+  population: number
+  ticksPlayed: number
 }
 
 /** Generates a 26-character ULID-compatible identifier (Crockford base32). */
@@ -51,6 +61,14 @@ export function useGame(selectedType: Ref<BuildingType>) {
     grossPerTick: 0, maintenancePerTick: 0, netPerTick: 0,
     grossPerHour: 0, maintenancePerHour: 0, netPerHour: 0,
   })
+  const prices = ref<Record<BuildingType, number>>({
+    house: 800, office: 4000, industry: 2500, park: 200, road: 80,
+    university: 8000, powerplant: 12000, port: 15000,
+  })
+  const pendingWave = ref<PendingWave | null>(null)
+  const defeated = ref(false)
+  /** Seconds the city has been continuously below the defeat floor. */
+  const debtTimer = ref(0)
   const cityUid = ref(generateCityId())
   const cityName = ref('MyTown')
 
@@ -73,6 +91,17 @@ export function useGame(selectedType: Ref<BuildingType>) {
 
   function handleClick(action: CellAction): void {
     if (!engine || !action.coords) return
+    if (defeated.value) return
+
+    if (action.kind === 'repair') {
+      const paid = engine.tryRepair(action.coords)
+      if (paid === null) notify('Pas assez d’argent pour réparer', 'error')
+      else {
+        notify(`Incident résolu — ${paid.toLocaleString('fr-FR')} €`, 'success')
+        refreshDerived()
+      }
+      return
+    }
 
     if (action.kind === 'place') {
       const placed = engine.tryPlaceBuilding(action.coords)
@@ -100,11 +129,27 @@ export function useGame(selectedType: Ref<BuildingType>) {
   function onEngineTick(delta: number): void {
     ticksPlayed.value += delta
     derivedTimer += delta
+
+    // Track sustained debt for the defeat condition.
+    if (money.value < DEFEAT_MONEY_FLOOR) {
+      debtTimer.value += delta
+      if (debtTimer.value >= DEFEAT_SUSTAINED_S && !defeated.value) {
+        defeated.value = true
+        engine?.pause()
+        notify('Banqueroute — la ville a fait faillite.', 'error')
+      }
+    } else if (debtTimer.value > 0) {
+      debtTimer.value = 0
+    }
+
     if (derivedTimer >= DERIVED_REFRESH_INTERVAL_S) {
       derivedTimer = 0
       refreshDerived()
     }
-    if (engine) demand.value = engine.demand.getState()
+    if (engine) {
+      demand.value = engine.demand.getState()
+      pendingWave.value = engine.getPendingWave()
+    }
   }
 
   function refreshDerived(): void {
@@ -114,13 +159,19 @@ export function useGame(selectedType: Ref<BuildingType>) {
     unlockedTiles.value = engine.grid.unlockedTilesCount()
     demand.value = engine.demand.getState()
     rates.value = engine.income.computeRates()
+    prices.value = engine.currentPrices()
+    pendingWave.value = engine.getPendingWave()
   }
 
   function newGame(): void {
     if (!engine) return
     engine.clearCity()
+    engine.resume()
     money.value = STARTING_MONEY
     ticksPlayed.value = 0
+    debtTimer.value = 0
+    defeated.value = false
+    pendingWave.value = null
     cityUid.value = generateCityId()
     cityName.value = `Town-${Date.now().toString(36)}`
     refreshDerived()
@@ -132,9 +183,16 @@ export function useGame(selectedType: Ref<BuildingType>) {
       buildings: snapshot.buildings,
       unlockedTiles: snapshot.unlockedTiles,
     })
+    engine.resume()
     money.value = snapshot.money
     cityUid.value = snapshot.uid
     cityName.value = snapshot.name
+    // Restore cumulative state so quests like "survive 2 minutes" don't reset
+    // each time the player reloads their city.
+    ticksPlayed.value = snapshot.ticksPlayed ?? 0
+    debtTimer.value = 0
+    defeated.value = false
+    pendingWave.value = null
     refreshDerived()
   }
 
@@ -144,10 +202,13 @@ export function useGame(selectedType: Ref<BuildingType>) {
     return {
       uid: cityUid.value,
       name: cityName.value,
-      money: money.value,
+      money: Math.max(0, Math.round(money.value)),
       gridSize: GRID_SIZE,
       buildings: state.buildings,
       unlockedTiles: state.unlockedTiles,
+      score: Math.max(0, Math.round(score.value)),
+      population: population.value,
+      ticksPlayed: Math.max(0, Math.round(ticksPlayed.value)),
     }
   }
 
@@ -162,6 +223,10 @@ export function useGame(selectedType: Ref<BuildingType>) {
     unlockedTiles,
     demand,
     rates,
+    prices,
+    pendingWave,
+    defeated,
+    debtTimer,
     cityUid,
     cityName,
     start,

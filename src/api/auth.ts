@@ -13,4 +13,8 @@ export const authApi = {
   me(): Promise<AuthUser> {
     return api.get('/api/users/me')
   },
+
+  prestige(): Promise<{ prestigeLevel: number; xp: number; level: number; multiplier: number }> {
+    return api.post('/api/users/me/prestige', {}, { contentType: 'application/json' })
+  },
 }

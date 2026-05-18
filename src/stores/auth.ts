@@ -58,5 +58,19 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  return { user, loading, error, isAuthenticated, bootstrap, login, register, logout }
+  /**
+   * Re-fetches the current user profile (xp, level, unlocks).
+   * Called after score submission so the HUD reflects new progression
+   * without forcing a full page reload.
+   */
+  async function refresh(): Promise<void> {
+    if (!tokenStorage.get()) return
+    try {
+      user.value = await authApi.me()
+    } catch {
+      // Stale token / network blip — silent. Existing user state stays.
+    }
+  }
+
+  return { user, loading, error, isAuthenticated, bootstrap, login, register, logout, refresh }
 })

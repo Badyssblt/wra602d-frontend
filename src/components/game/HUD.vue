@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { BuildingType } from '../../types'
 import BuildingToolbar from './BuildingToolbar.vue'
 
-defineProps<{
+const props = defineProps<{
   cityName: string
   username: string | null
   money: number
@@ -15,6 +16,16 @@ defineProps<{
   /** Maintenance €/h (negative number when displayed). */
   maintenancePerHour: number
   selectedType: BuildingType
+  /** Next-placement price per building type (dynamic, depends on current city). */
+  prices: Record<BuildingType, number>
+  /** Current account level (gates advanced buildings). */
+  playerLevel: number
+  /** Accumulated XP across all submitted scores. */
+  playerXp: number
+  /** XP threshold for next level, or null if max level reached. */
+  xpForNextLevel: number | null
+  /** Prestige tier (shown next to the level when > 0). */
+  prestigeLevel: number
   busy: boolean
 }>()
 
@@ -24,12 +35,24 @@ defineEmits<{
   new: []
   save: []
   load: []
-  submit: []
   toggleLeaderboard: []
+  toggleQuests: []
+  prestige: []
 }>()
 
 const fmt = (n: number) => n.toLocaleString('fr-FR')
 const fmtSigned = (n: number) => `${n >= 0 ? '+' : '−'}${fmt(Math.abs(Math.round(n)))}`
+
+/** XP at the start of the current level — mirrors ProgressionPolicy.xpForLevel. */
+const previousLevelTarget = computed(() => 150 * props.playerLevel * props.playerLevel)
+
+/** 0–100 % progress toward the next level (or 100 % at max level). */
+const xpProgress = computed(() => {
+  if (props.xpForNextLevel === null) return 100
+  const span = Math.max(1, props.xpForNextLevel - previousLevelTarget.value)
+  const into = Math.max(0, props.playerXp - previousLevelTarget.value)
+  return Math.min(100, Math.round((into / span) * 100))
+})
 </script>
 
 <template>
@@ -55,6 +78,23 @@ const fmtSigned = (n: number) => `${n >= 0 ? '+' : '−'}${fmt(Math.abs(Math.rou
           @input="$emit('update:cityName', ($event.target as HTMLInputElement).value)"
         />
         <div v-if="username" class="city-meta">par <strong>{{ username }}</strong></div>
+        <div v-if="username" class="xp-row" :title="`${fmt(playerXp)} XP / ${xpForNextLevel === null ? '∞' : fmt(xpForNextLevel)} XP`">
+          <span class="level-badge">
+            Lvl {{ playerLevel }}<span v-if="prestigeLevel > 0" class="prestige">★{{ prestigeLevel }}</span>
+          </span>
+          <button
+            v-if="xpForNextLevel === null"
+            type="button"
+            class="prestige-btn"
+            title="Prestige : reset le niveau contre un bonus permanent de +10 %"
+            @click="$emit('prestige')"
+          >
+            ✦ Prestige
+          </button>
+          <div v-else class="xp-bar" :aria-label="`Progression : ${xpProgress}%`">
+            <div class="xp-fill" :style="{ width: `${xpProgress}%` }"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -83,26 +123,31 @@ const fmtSigned = (n: number) => `${n >= 0 ? '+' : '−'}${fmt(Math.abs(Math.rou
     <!-- Build toolbar -->
     <section class="panel build">
       <div class="panel-title">Construction</div>
-      <BuildingToolbar :selected="selectedType" @select="$emit('select', $event)" />
+      <BuildingToolbar
+        :selected="selectedType"
+        :prices="prices"
+        :player-level="playerLevel"
+        @select="$emit('select', $event)"
+      />
     </section>
 
     <!-- Actions -->
     <section class="panel actions">
-      <button :disabled="busy" title="Nouvelle partie" @click="$emit('new')">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-        <span>Nouvelle</span>
+      <button :disabled="busy" title="Supprimer la partie en cours et recommencer" @click="$emit('new')">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
+        <span>Recommencer</span>
       </button>
-      <button :disabled="busy" title="Sauvegarder" @click="$emit('save')">
+      <button :disabled="busy" title="Sauvegarder (envoie aussi le score)" @click="$emit('save')">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></svg>
-        <span>Sauver</span>
+        <span>Sauvegarder</span>
       </button>
       <button :disabled="busy" title="Charger une ville" @click="$emit('load')">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H3Z" /></svg>
         <span>Charger</span>
       </button>
-      <button :disabled="busy" title="Soumettre votre score" @click="$emit('submit')">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z" /></svg>
-        <span>Soumettre</span>
+      <button class="ghost" title="Quêtes du jour" @click="$emit('toggleQuests')">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 7-7" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+        <span>Quêtes</span>
       </button>
       <button class="ghost" title="Voir le classement" @click="$emit('toggleLeaderboard')">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v6a5 5 0 0 1-10 0Z" /><path d="M17 4h3v3a3 3 0 0 1-3 3" /><path d="M7 4H4v3a3 3 0 0 0 3 3" /></svg>
@@ -144,7 +189,7 @@ const fmtSigned = (n: number) => `${n >= 0 ? '+' : '−'}${fmt(Math.abs(Math.rou
 }
 
 /* ===== City panel ===== */
-.city { min-width: 220px; }
+.city { min-width: 240px; }
 .emblem {
   display: grid;
   place-items: center;
@@ -159,8 +204,9 @@ const fmtSigned = (n: number) => `${n >= 0 ? '+' : '−'}${fmt(Math.abs(Math.rou
 .city-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
+  flex: 1;
 }
 .city-name {
   background: transparent;
@@ -186,6 +232,69 @@ const fmtSigned = (n: number) => `${n >= 0 ? '+' : '−'}${fmt(Math.abs(Math.rou
   letter-spacing: 0.04em;
 }
 .city-meta strong { color: rgba(255, 255, 255, 0.85); font-weight: 500; }
+
+/* ===== XP / level row ===== */
+.xp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c4b5fd;
+  padding: 2px 6px;
+  background: rgba(196, 181, 253, 0.12);
+  border: 1px solid rgba(196, 181, 253, 0.3);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.prestige {
+  font-size: 9px;
+  color: #fbbf24;
+  margin-left: 2px;
+}
+.xp-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 60px;
+}
+.xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c4b5fd, #a78bfa);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+.prestige-btn {
+  flex: 1;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, transform 0.08s;
+}
+.prestige-btn:hover {
+  background: rgba(251, 191, 36, 0.2);
+}
+.prestige-btn:active {
+  transform: scale(0.97);
+}
 
 /* ===== Stats panel ===== */
 .stats { gap: 22px; }

@@ -7,10 +7,6 @@ function unwrap<T>(res: HydraCollection<T> | T[]): T[] {
 }
 
 export const scoresApi = {
-  submit(payload: { score: number; moneyFinal: number; population: number; ticksPlayed: number; city?: string }): Promise<ApiScore> {
-    return api.post('/api/scores', payload)
-  },
-
   async mine(): Promise<ApiScore[]> {
     const res = await api.get<HydraCollection<ApiScore> | ApiScore[]>('/api/scores')
     return unwrap(res)

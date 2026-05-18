@@ -6,6 +6,16 @@ export interface AuthUser {
   pseudonym: string
   roles: string[]
   createdAt: string
+  /** Cumulative XP earned across all scores submitted. */
+  xp?: number
+  /** Current level derived from xp via the server-side policy. */
+  level?: number
+  /** XP threshold for the next level; null when MAX_LEVEL is reached. */
+  xpForNextLevel?: number | null
+  /** Number of times the player has prestiged (resets level, keeps multiplier). */
+  prestigeLevel?: number
+  /** Building types the player can place (gated on level). */
+  unlockedBuildings?: BuildingType[]
 }
 
 export interface LoginResponse {
@@ -30,6 +40,10 @@ export interface ApiCity {
   gridSize: number
   buildings: ApiBuilding[]
   unlockedTiles?: ApiTileCoords[]
+  /** Snapshot of the player-side score at the latest save. */
+  score?: number
+  population?: number
+  ticksPlayed?: number
   createdAt?: string
   updatedAt?: string
 }

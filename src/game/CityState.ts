@@ -23,7 +23,10 @@ export function computeScore(money: number, grid: Grid, ticksPlayed: number): nu
 
 /** Counts how many of each type are placed. */
 export function buildingTypesPresent(grid: Grid): Record<BuildingType, number> {
-  const counts: Record<BuildingType, number> = { house: 0, office: 0, industry: 0, park: 0, road: 0 }
+  const counts: Record<BuildingType, number> = {
+    house: 0, office: 0, industry: 0, park: 0, road: 0,
+    university: 0, powerplant: 0, port: 0,
+  }
   for (const t of grid.getAllBuildings()) {
     counts[t]++
   }
@@ -33,9 +36,10 @@ export function buildingTypesPresent(grid: Grid): Record<BuildingType, number> {
 /** Bonus when the three productive zones are near a 1:1:1 ratio; penalty otherwise. */
 function computeBalanceBonus(grid: Grid): number {
   const counts = buildingTypesPresent(grid)
-  const r = counts.house
-  const c = counts.office
-  const i = counts.industry
+  // Group by demand zone so advanced buildings (university → residential, etc.) count too.
+  const r = counts.house + counts.university
+  const c = counts.office + counts.port
+  const i = counts.industry + counts.powerplant
   const total = r + c + i
   if (total < 3) return 0
 

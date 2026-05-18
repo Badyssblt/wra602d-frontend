@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { citiesApi } from '../api/cities'
 import type { ApiCity } from '../api/types'
 import type { CitySnapshot } from './useGame'
+import { useAuthStore } from '../stores/auth'
 import { useToast } from './useToast'
 
 /**
@@ -12,6 +13,7 @@ export function useCityPersistence(opts: {
   applySnapshot: (city: CitySnapshot) => void
 }) {
   const { notify } = useToast()
+  const auth = useAuthStore()
   const myCities = ref<ApiCity[]>([])
   const busy = ref(false)
 
@@ -21,6 +23,9 @@ export function useCityPersistence(opts: {
     try {
       const saved = await citiesApi.save(opts.takeSnapshot())
       notify(`Ville "${saved.name}" sauvegardée`, 'success')
+      // Save crédite l'XP côté serveur (delta high-water mark) — on rafraîchit
+      // pour que le HUD reflète l'éventuelle montée de niveau / unlock.
+      void auth.refresh()
     } catch (e) {
       notify(e instanceof Error ? e.message : 'Erreur sauvegarde', 'error')
     } finally {
@@ -50,6 +55,9 @@ export function useCityPersistence(opts: {
         gridSize: c.gridSize,
         buildings: c.buildings ?? [],
         unlockedTiles: c.unlockedTiles ?? [],
+        score: c.score ?? 0,
+        population: c.population ?? 0,
+        ticksPlayed: c.ticksPlayed ?? 0,
       })
       notify(`Ville "${c.name}" chargée`, 'success')
     } catch (e) {

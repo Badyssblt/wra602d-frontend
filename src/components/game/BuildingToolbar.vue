@@ -1,42 +1,78 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { BuildingType } from '../../types'
-import { BUILDING_CONFIG } from '../../game/BuildingConfig'
+import { BUILDING_CONFIG, BUILDING_ORDER } from '../../game/BuildingConfig'
 import BuildingIcon from './BuildingIcon.vue'
 
-defineProps<{ selected: BuildingType }>()
+const props = defineProps<{
+  selected: BuildingType
+  /** Next-placement price per type, recomputed each tick (quadratic curve). */
+  prices: Record<BuildingType, number>
+  /** Player's current account level — gates advanced buildings. */
+  playerLevel: number
+}>()
 defineEmits<{ select: [BuildingType] }>()
 
 interface Item {
   type: BuildingType
   label: string
   color: string
+  unlockLevel: number
 }
 
-const ITEMS: Item[] = [
-  { type: 'house', label: 'Maison', color: '#e8864a' },
-  { type: 'office', label: 'Bureau', color: '#5b8dd9' },
-  { type: 'industry', label: 'Industrie', color: '#fbbf24' },
-  { type: 'park', label: 'Parc', color: '#4caf50' },
-  { type: 'road', label: 'Route', color: '#a1a1aa' },
-]
+const COLOR: Record<BuildingType, string> = {
+  house:      '#e8864a',
+  office:     '#5b8dd9',
+  industry:   '#fbbf24',
+  park:       '#4caf50',
+  road:       '#a1a1aa',
+  university: '#a78bfa',
+  powerplant: '#ef4444',
+  port:       '#14b8a6',
+}
+
+const items = computed<Item[]>(() =>
+  BUILDING_ORDER.map((type) => ({
+    type,
+    label: BUILDING_CONFIG[type].label,
+    color: COLOR[type],
+    unlockLevel: BUILDING_CONFIG[type].unlockLevel,
+  })),
+)
+
+const fmt = (n: number) => n.toLocaleString('fr-FR')
+
+function isLocked(unlockLevel: number): boolean {
+  return props.playerLevel < unlockLevel
+}
 </script>
 
 <template>
   <div class="toolbar">
     <button
-      v-for="item in ITEMS"
+      v-for="item in items"
       :key="item.type"
       type="button"
       class="btn"
-      :class="{ active: selected === item.type }"
+      :class="{ active: selected === item.type, locked: isLocked(item.unlockLevel) }"
       :style="{ '--accent': item.color }"
-      :title="`${item.label} — ${BUILDING_CONFIG[item.type].price} €`"
-      :aria-label="`${item.label}, ${BUILDING_CONFIG[item.type].price} euros`"
+      :disabled="isLocked(item.unlockLevel)"
+      :title="
+        isLocked(item.unlockLevel)
+          ? `${item.label} — débloqué au niveau ${item.unlockLevel}`
+          : `${item.label} — ${fmt(prices[item.type])} €`
+      "
+      :aria-label="
+        isLocked(item.unlockLevel)
+          ? `${item.label}, verrouillé, niveau ${item.unlockLevel} requis`
+          : `${item.label}, ${fmt(prices[item.type])} euros`
+      "
       :aria-pressed="selected === item.type"
-      @click="$emit('select', item.type)"
+      @click="!isLocked(item.unlockLevel) && $emit('select', item.type)"
     >
       <BuildingIcon :type="item.type" />
-      <span class="price">{{ BUILDING_CONFIG[item.type].price }} €</span>
+      <span v-if="isLocked(item.unlockLevel)" class="lock">Lvl {{ item.unlockLevel }}</span>
+      <span v-else class="price">{{ fmt(prices[item.type]) }} €</span>
     </button>
   </div>
 </template>
@@ -44,6 +80,7 @@ const ITEMS: Item[] = [
 <style scoped>
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 6px;
   background: rgba(255, 255, 255, 0.05);
@@ -66,11 +103,11 @@ const ITEMS: Item[] = [
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.08s;
 }
-.btn:hover {
+.btn:hover:not(.locked) {
   background: rgba(255, 255, 255, 0.08);
   color: white;
 }
-.btn:active {
+.btn:active:not(.locked) {
   transform: scale(0.95);
 }
 .btn.active {
@@ -78,13 +115,26 @@ const ITEMS: Item[] = [
   border-color: var(--accent);
   color: var(--accent);
 }
+.btn.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: rgba(255, 255, 255, 0.45);
+}
 .price {
   font-size: 10px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.55);
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 .btn.active .price {
   color: var(--accent);
+}
+.lock {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
 }
 </style>

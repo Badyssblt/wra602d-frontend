@@ -19,4 +19,8 @@ export const citiesApi = {
   save(payload: ApiCity): Promise<ApiCity> {
     return api.post('/api/cities/save', payload)
   },
+
+  remove(uid: string): Promise<void> {
+    return api.delete(`/api/cities/${uid}`)
+  },
 }

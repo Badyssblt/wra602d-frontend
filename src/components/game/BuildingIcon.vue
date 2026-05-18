@@ -71,6 +71,56 @@ defineProps<{ type: BuildingType }>()
   </svg>
 
   <svg
+    v-else-if="type === 'university'"
+    viewBox="0 0 24 24"
+    width="22"
+    height="22"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  >
+    <path d="M2 9 12 4l10 5-10 5Z" />
+    <path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" />
+    <path d="M22 9v6" />
+  </svg>
+
+  <svg
+    v-else-if="type === 'powerplant'"
+    viewBox="0 0 24 24"
+    width="22"
+    height="22"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  >
+    <path d="M6 21V10c0-1 .8-2 2-2 1.2 0 2 1 2 2v11" />
+    <path d="M14 21V10c0-1 .8-2 2-2 1.2 0 2 1 2 2v11" />
+    <path d="M3 21h18" />
+    <path d="M8 8c-.5-2 .5-4 2-4M16 8c-.5-2 .5-4 2-4" />
+  </svg>
+
+  <svg
+    v-else-if="type === 'port'"
+    viewBox="0 0 24 24"
+    width="22"
+    height="22"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  >
+    <path d="M3 17c1.5 1.5 3 2 4.5 2s3-.5 4.5-2 3-2 4.5-2 3 .5 4.5 2" />
+    <path d="M5 14h14l-2 3H7Z" />
+    <path d="M12 14V5" />
+    <circle cx="12" cy="4" r="1.2" />
+  </svg>
+
+  <svg
     v-else
     viewBox="0 0 24 24"
     width="22"
