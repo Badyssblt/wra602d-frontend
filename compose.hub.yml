@@ -1,6 +1,6 @@
 # Stack complète wra602 — une seule image publique Docker Hub.
 #
-#   docker pull badyssblt/wra602d
+#   docker pull mirooyo/wra602d
 #   docker compose -f compose.hub.yml up -d
 #
 # App  → http://localhost
@@ -34,7 +34,7 @@ services:
     restart: unless-stopped
 
   app:
-    image: badyssblt/wra602d:latest
+    image: mirooyo/wra602d:latest
     ports:
       - "80:80"
     environment:
