@@ -43,7 +43,7 @@ services:
       SKIP_DB: "0"
       JWT_SECRET_KEY: /app/backend/config/jwt/private.pem
       JWT_PUBLIC_KEY: /app/backend/config/jwt/public.pem
-      JWT_PASSPHRASE: ${JWT_PASSPHRASE:?JWT_PASSPHRASE requis dans .env}
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:-changeme}
       MICROSERVICE_MAILER_URL: http://127.0.0.1:8001
       MICROSERVICE_MAILER_TOKEN: ${MICROSERVICE_SHARED_SECRET:-changeme-generate-with-openssl}
       MICROSERVICE_SHARED_SECRET: ${MICROSERVICE_SHARED_SECRET:-changeme-generate-with-openssl}
