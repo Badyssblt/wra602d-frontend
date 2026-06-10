@@ -41,6 +41,8 @@ services:
       APP_SECRET: ${APP_SECRET:-changeme-generate-with-openssl}
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-changeme}@database:5432/${POSTGRES_DB:-wra602}?serverVersion=16&charset=utf8
       SKIP_DB: "0"
+      JWT_SECRET_KEY: /app/backend/config/jwt/private.pem
+      JWT_PUBLIC_KEY: /app/backend/config/jwt/public.pem
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:-changeme-generate-with-openssl}
       MICROSERVICE_MAILER_URL: http://127.0.0.1:8001
       MICROSERVICE_MAILER_TOKEN: ${MICROSERVICE_SHARED_SECRET:-changeme-generate-with-openssl}
