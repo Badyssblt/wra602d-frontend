@@ -1,0 +1,62 @@
+# Stack complète wra602 — une seule image publique Docker Hub.
+#
+#   docker pull badyssblt/wra602d
+#   docker compose -f compose.hub.yml up -d
+#
+# App  → http://localhost
+# API  → http://localhost/api/...  (même port, routé par nginx)
+# Mail → http://localhost:8025     (Mailpit, catch-all SMTP)
+
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wra602}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-wra602}", "-U", "${POSTGRES_USER:-app}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  mailer:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    restart: unless-stopped
+
+  app:
+    image: badyssblt/wra602d:latest
+    ports:
+      - "80:80"
+    environment:
+      APP_ENV: prod
+      APP_SECRET: ${APP_SECRET:-changeme-generate-with-openssl}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-changeme}@database:5432/${POSTGRES_DB:-wra602}?serverVersion=16&charset=utf8
+      SKIP_DB: "0"
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:-changeme-generate-with-openssl}
+      MICROSERVICE_MAILER_URL: http://127.0.0.1:8001
+      MICROSERVICE_MAILER_TOKEN: ${MICROSERVICE_SHARED_SECRET:-changeme-generate-with-openssl}
+      MICROSERVICE_SHARED_SECRET: ${MICROSERVICE_SHARED_SECRET:-changeme-generate-with-openssl}
+      MAILER_DSN: smtp://mailer:1025
+      MAILER_FROM: ${MAILER_FROM:-wra602 <noreply@wra602.local>}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
+      VITE_API_URL: ${VITE_API_URL:-http://localhost}
+    depends_on:
+      database:
+        condition: service_healthy
+      mailer:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  db_data:
