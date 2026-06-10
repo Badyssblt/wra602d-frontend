@@ -42,8 +42,8 @@ async function submit(): Promise<void> {
 
       <label>
         Mot de passe
-        <input v-model="password" type="password" required minlength="8" autocomplete="current-password" />
-        <small v-if="mode === 'register'">8 caractères min, 1 majuscule, 1 chiffre</small>
+        <input v-model="password" type="password" required autocomplete="current-password" />
+        <small v-if="mode === 'register'">Au moins 1 caractère</small>
       </label>
 
       <p v-if="formError" class="err">{{ formError }}</p>
