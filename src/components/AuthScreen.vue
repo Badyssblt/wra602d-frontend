@@ -25,292 +25,311 @@ async function submit(): Promise<void> {
 
 <template>
   <div class="screen">
-    <div class="bg-grid"></div>
-    <div class="glow glow-1"></div>
-    <div class="glow glow-2"></div>
+    <!-- Top-down city grid background -->
+    <div class="city-map" aria-hidden="true">
+      <div v-for="i in 120" :key="i" class="block" :data-i="i"></div>
+    </div>
 
-    <div class="card">
-      <div class="brand">
-        <div class="brand-icon">🏙️</div>
-        <div class="brand-text">
-          <div class="brand-name">WRA602</div>
-          <div class="brand-sub">City Builder</div>
+    <div class="panel">
+      <!-- Left: branding + tagline -->
+      <div class="brand-col">
+        <div class="brand-logo">🏙️</div>
+        <h1 class="brand-title">WRA<em>602</em></h1>
+        <p class="brand-tagline">Construisez, planifiez,<br>dominez le classement.</p>
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-num">∞</span>
+            <span class="stat-label">Villes</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-num">8</span>
+            <span class="stat-label">Bâtiments</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-num">★</span>
+            <span class="stat-label">Prestige</span>
+          </div>
         </div>
       </div>
 
-      <div class="tabs">
-        <button :class="{ active: mode === 'login' }" @click.prevent="mode = 'login'; formError = null">
-          Connexion
-        </button>
-        <button :class="{ active: mode === 'register' }" @click.prevent="mode = 'register'; formError = null">
-          Inscription
-        </button>
-        <div class="tab-indicator" :class="{ right: mode === 'register' }"></div>
-      </div>
-
-      <form class="form" @submit.prevent="submit">
-        <div v-if="formError" class="error-box">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          {{ formError }}
+      <!-- Right: form -->
+      <div class="form-col">
+        <div class="mode-toggle">
+          <button :class="{ on: mode === 'login' }" @click.prevent="mode = 'login'; formError = null">
+            Connexion
+          </button>
+          <button :class="{ on: mode === 'register' }" @click.prevent="mode = 'register'; formError = null">
+            Inscription
+          </button>
         </div>
 
-        <div class="field">
-          <label>Email</label>
-          <input v-model="email" type="email" required autocomplete="email" placeholder="vous@exemple.com" />
-        </div>
+        <form class="form" @submit.prevent="submit">
+          <div v-if="formError" class="error-row">
+            {{ formError }}
+          </div>
 
-        <div v-if="mode === 'register'" class="field">
-          <label>Pseudonyme</label>
-          <input v-model="pseudonym" type="text" required minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" placeholder="MonPseudo" />
-          <span class="hint">3–30 caractères, alphanumérique / _ / -</span>
-        </div>
+          <div class="field">
+            <label>Email</label>
+            <input v-model="email" type="email" required autocomplete="email" placeholder="vous@exemple.com" />
+          </div>
 
-        <div class="field">
-          <label>Mot de passe</label>
-          <input v-model="password" type="password" required autocomplete="current-password" placeholder="••••••••" />
-        </div>
+          <div v-if="mode === 'register'" class="field">
+            <label>Pseudonyme</label>
+            <input v-model="pseudonym" type="text" required minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" placeholder="MonPseudo" />
+          </div>
 
-        <button type="submit" class="submit-btn" :disabled="auth.loading">
-          <span v-if="auth.loading" class="spinner"></span>
-          <span v-else>{{ mode === 'login' ? 'Se connecter' : "Créer le compte" }}</span>
-          <svg v-if="!auth.loading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 14 0"/><path d="m12 5 7 7-7 7"/></svg>
-        </button>
-      </form>
+          <div class="field">
+            <label>Mot de passe</label>
+            <input v-model="password" type="password" required autocomplete="current-password" placeholder="••••••••" />
+          </div>
 
-      <div class="footer-note">
-        {{ mode === 'login' ? 'Pas encore de compte ?' : 'Déjà inscrit ?' }}
-        <a href="#" @click.prevent="mode = mode === 'login' ? 'register' : 'login'; formError = null">
-          {{ mode === 'login' ? 'Créer un compte' : 'Se connecter' }}
-        </a>
+          <button type="submit" class="submit" :disabled="auth.loading">
+            <span v-if="auth.loading" class="spinner"></span>
+            <span v-else>{{ mode === 'login' ? 'Jouer →' : 'Créer le compte →' }}</span>
+          </button>
+        </form>
+
+        <p class="switch-note">
+          {{ mode === 'login' ? 'Pas de compte ?' : 'Déjà inscrit ?' }}
+          <a href="#" @click.prevent="mode = mode === 'login' ? 'register' : 'login'; formError = null">
+            {{ mode === 'login' ? 'Inscription' : 'Connexion' }}
+          </a>
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* ── Screen ── */
 .screen {
   position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
-  background: #060d1a;
+  background: #0c2d22;
   overflow: hidden;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-/* Animated grid background */
-.bg-grid {
+/* ── City map grid background ── */
+.city-map {
   position: absolute;
-  inset: -50%;
-  background-image:
-    linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px);
-  background-size: 48px 48px;
-  animation: grid-drift 20s linear infinite;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  gap: 4px;
+  padding: 4px;
   pointer-events: none;
 }
-@keyframes grid-drift {
-  from { transform: translate(0, 0); }
-  to   { transform: translate(48px, 48px); }
+.block {
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.025);
+  animation: flicker 8s ease-in-out infinite;
+}
+/* Vary animation delay per block for organic feel */
+.block:nth-child(3n)   { animation-delay: 0s;   background: rgba(255,255,255,0.04); }
+.block:nth-child(5n)   { animation-delay: 1.3s; background: rgba(251,191,36,0.06); }
+.block:nth-child(7n)   { animation-delay: 2.7s; background: rgba(255,255,255,0.015); }
+.block:nth-child(11n)  { animation-delay: 0.6s; background: rgba(251,191,36,0.04); }
+.block:nth-child(13n)  { animation-delay: 3.4s; }
+.block:nth-child(2n+1) { animation-delay: 1.8s; }
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
 }
 
-.glow {
+/* Overlay gradient so panel is readable */
+.screen::after {
+  content: '';
   position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
+  inset: 0;
+  background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(12,45,34,0.55) 0%, rgba(12,45,34,0.85) 100%);
   pointer-events: none;
-  animation: pulse-glow 6s ease-in-out infinite alternate;
-}
-.glow-1 {
-  width: 500px; height: 500px;
-  background: rgba(59, 130, 246, 0.12);
-  top: -150px; left: -100px;
-}
-.glow-2 {
-  width: 400px; height: 400px;
-  background: rgba(99, 102, 241, 0.10);
-  bottom: -100px; right: -80px;
-  animation-delay: 3s;
-}
-@keyframes pulse-glow {
-  from { opacity: 0.6; transform: scale(1); }
-  to   { opacity: 1;   transform: scale(1.15); }
 }
 
-/* Card */
-.card {
+/* ── Panel ── */
+.panel {
   position: relative;
-  width: min(420px, 92vw);
-  background: rgba(10, 16, 30, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(760px, 94vw);
+  background: rgba(10, 25, 18, 0.70);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 20px;
-  padding: 32px 28px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Brand col ── */
+.brand-col {
+  padding: 40px 36px;
+  background: rgba(0,0,0,0.2);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
   color: white;
 }
-
-/* Brand */
-.brand {
+.brand-logo { font-size: 40px; line-height: 1; }
+.brand-title {
+  font-size: 46px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: #faf8f3;
+  line-height: 1;
+}
+.brand-title em { font-style: normal; color: #fbbf24; }
+.brand-tagline {
+  font-size: 14px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.6;
+  font-weight: 400;
+}
+.stats-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 28px;
+  gap: 16px;
+  margin-top: 8px;
 }
-.brand-icon {
-  width: 46px; height: 46px;
-  border-radius: 13px;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
-}
-.brand-name {
+.stat-item { display: flex; flex-direction: column; gap: 2px; }
+.stat-num {
   font-size: 20px;
   font-weight: 800;
-  letter-spacing: -0.03em;
-  color: #f8fafc;
+  color: #fbbf24;
+  line-height: 1;
 }
-.brand-sub {
-  font-size: 11px;
-  color: #475569;
-  letter-spacing: 0.08em;
+.stat-label {
+  font-size: 10px;
   text-transform: uppercase;
-  margin-top: 1px;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.3);
+  font-weight: 600;
+}
+.stat-divider { width: 1px; height: 30px; background: rgba(255,255,255,0.1); }
+
+/* ── Form col ── */
+.form-col {
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
 }
 
-/* Tabs */
-.tabs {
-  position: relative;
+.mode-toggle {
   display: flex;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 10px;
-  padding: 4px;
+  gap: 0;
   margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-.tabs button {
+.mode-toggle button {
   flex: 1;
-  padding: 8px;
+  padding: 8px 0;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.45);
+  border-bottom: 2px solid transparent;
+  color: rgba(255,255,255,0.35);
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  position: relative;
-  z-index: 1;
-  transition: color 0.2s;
-  border-radius: 7px;
+  letter-spacing: 0.02em;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
 }
-.tabs button.active { color: white; }
-.tab-indicator {
-  position: absolute;
-  top: 4px; left: 4px;
-  width: calc(50% - 4px);
-  height: calc(100% - 8px);
-  background: rgba(59, 130, 246, 0.2);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  border-radius: 7px;
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+.mode-toggle button.on {
+  color: #fbbf24;
+  border-bottom-color: #fbbf24;
 }
-.tab-indicator.right { transform: translateX(calc(100% + 0px)); }
 
-/* Form */
-.form { display: flex; flex-direction: column; gap: 16px; }
+.form { display: flex; flex-direction: column; gap: 14px; }
 
-.error-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+.error-row {
+  background: rgba(185,28,28,0.12);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-left: 3px solid #ef4444;
   color: #fca5a5;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 13px;
+  border-radius: 5px;
+  padding: 9px 12px;
+  font-size: 12px;
 }
 
-.field { display: flex; flex-direction: column; gap: 6px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
 .field label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #94a3b8;
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
 }
 .field input {
-  padding: 11px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 9px;
-  color: white;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px;
+  color: #faf8f3;
   font-size: 14px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  transition: border-color 0.12s, box-shadow 0.12s;
 }
-.field input::placeholder { color: #1e3a5f; }
+.field input::placeholder { color: rgba(255,255,255,0.18); }
 .field input:focus {
-  border-color: rgba(59, 130, 246, 0.6);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
-  background: rgba(255, 255, 255, 0.07);
-}
-.hint {
-  font-size: 11px;
-  color: #475569;
+  border-color: rgba(251,191,36,0.5);
+  box-shadow: 0 0 0 3px rgba(251,191,36,0.08);
 }
 
-/* Submit */
-.submit-btn {
+.submit {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 13px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  padding: 11px;
+  margin-top: 4px;
+  background: #d97706;
   border: none;
-  border-radius: 10px;
-  color: white;
-  font-size: 15px;
+  border-radius: 5px;
+  color: #1c1917;
+  font-size: 14px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
-  margin-top: 4px;
+  letter-spacing: 0.01em;
+  transition: background 0.12s;
 }
-.submit-btn:hover:not(:disabled) {
-  opacity: 0.92;
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
-}
-.submit-btn:active:not(:disabled) { transform: scale(0.98); }
-.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.submit:hover:not(:disabled) { background: #fbbf24; }
+.submit:active:not(:disabled) { transform: scale(0.99); }
+.submit:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .spinner {
-  width: 16px; height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: white;
+  width: 15px; height: 15px;
+  border: 2px solid rgba(28,25,23,0.3);
+  border-top-color: #1c1917;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Footer note */
-.footer-note {
-  margin-top: 20px;
-  font-size: 13px;
+.switch-note {
+  margin-top: 16px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.3);
   text-align: center;
-  color: rgba(255, 255, 255, 0.4);
 }
-.footer-note a {
-  color: #60a5fa;
-  text-decoration: none;
-  font-weight: 500;
-  margin-left: 4px;
+.switch-note a { color: #fbbf24; text-decoration: none; margin-left: 4px; font-weight: 600; }
+.switch-note a:hover { text-decoration: underline; }
+
+@media (max-width: 580px) {
+  .panel { grid-template-columns: 1fr; }
+  .brand-col { display: none; }
 }
-.footer-note a:hover { text-decoration: underline; }
 </style>
