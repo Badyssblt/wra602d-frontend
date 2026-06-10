@@ -1,11 +1,10 @@
 # Stack complète wra602 — une seule image publique Docker Hub.
 #
-#   docker pull mirooyo/wra602d
 #   docker compose -f compose.hub.yml up -d
 #
-# App  → http://localhost
-# API  → http://localhost/api/...  (même port, routé par nginx)
-# Mail → http://localhost:8025     (Mailpit, catch-all SMTP)
+# App  → http://localhost:8080
+# API  → http://localhost:8080/api/...
+# Mail → http://localhost:8025
 
 services:
   database:
@@ -36,7 +35,7 @@ services:
   app:
     image: mirooyo/wra602d:latest
     ports:
-      - "80:80"
+      - "8080:80"
     environment:
       APP_ENV: prod
       APP_SECRET: ${APP_SECRET:-changeme-generate-with-openssl}
@@ -48,9 +47,9 @@ services:
       MICROSERVICE_SHARED_SECRET: ${MICROSERVICE_SHARED_SECRET:-changeme-generate-with-openssl}
       MAILER_DSN: smtp://mailer:1025
       MAILER_FROM: ${MAILER_FROM:-wra602 <noreply@wra602.local>}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
-      VITE_API_URL: ${VITE_API_URL:-http://localhost}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
     depends_on:
       database:
         condition: service_healthy
