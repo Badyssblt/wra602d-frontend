@@ -59,7 +59,7 @@ export function useCityPersistence(opts: {
         population: c.population ?? 0,
         ticksPlayed: c.ticksPlayed ?? 0,
       })
-      notify(`Ville "${c.name}" chargée`, 'success')
+      notify(`Ville "${c.name}" chargee`, 'success')
     } catch (e) {
       notify(e instanceof Error ? e.message : 'Erreur chargement', 'error')
     } finally {
@@ -67,5 +67,30 @@ export function useCityPersistence(opts: {
     }
   }
 
-  return { myCities, busy, save, fetchList, load }
+  async function autoLoad(): Promise<void> {
+    busy.value = true
+    try {
+      const cities = await citiesApi.list()
+      const c = cities[0]
+      if (c) {
+        opts.applySnapshot({
+          uid: c.uid,
+          name: c.name,
+          money: c.money,
+          gridSize: c.gridSize,
+          buildings: c.buildings ?? [],
+          unlockedTiles: c.unlockedTiles ?? [],
+          score: c.score ?? 0,
+          population: c.population ?? 0,
+          ticksPlayed: c.ticksPlayed ?? 0,
+        })
+      }
+    } catch {
+      // Silent — if fetch fails the player just starts from a fresh local state
+    } finally {
+      busy.value = false
+    }
+  }
+
+  return { myCities, busy, save, fetchList, load, autoLoad }
 }

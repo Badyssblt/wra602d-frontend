@@ -32,11 +32,11 @@ async function handleClaim(quest: Quest): Promise<void> {
   claiming.value = quest.code
   try {
     const result = await questsApi.claim(quest.code)
-    notify(`+${result.xpAwarded} XP — quête réclamée`, 'success')
+    notify(`+${result.xpAwarded} XP — quete reclamee`, 'success')
     void auth.refresh()
     await load()
   } catch (e) {
-    notify(e instanceof Error ? e.message : 'Erreur lors de la réclamation', 'error')
+    notify(e instanceof Error ? e.message : 'Erreur lors de la reclamation', 'error')
   } finally {
     claiming.value = null
   }
@@ -62,43 +62,45 @@ watch(() => props.open, (v) => { if (v) void load() })
 </script>
 
 <template>
-  <aside v-if="open" class="panel" role="complementary" aria-label="Quêtes">
-    <header>
-      <h2>Quêtes</h2>
-      <button class="close" aria-label="Fermer" @click="emit('close')">✕</button>
+  <aside v-if="open" class="panel" role="complementary" aria-label="Quetes">
+    <header class="panel-head">
+      <div class="panel-title">Quetes</div>
+      <button class="close-btn" aria-label="Fermer" @click="emit('close')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
     </header>
 
-    <button class="refresh" :disabled="loading" @click="load">
-      {{ loading ? 'Chargement…' : 'Rafraîchir' }}
+    <button class="refresh-btn" :disabled="loading" @click="load">
+      {{ loading ? 'Chargement...' : 'Rafraichir' }}
     </button>
 
     <p v-if="error" class="err">{{ error }}</p>
 
-    <ul v-else class="list">
+    <ul class="list">
       <li v-for="q in quests" :key="q.code" class="quest" :class="{ claimed: q.claimed }">
         <div class="head">
           <span class="kind" :class="q.kind">{{ q.kind === 'weekly' ? 'Hebdo' : 'Quotidien' }}</span>
           <span class="reward">+{{ q.xpReward }} XP</span>
         </div>
         <div class="label">{{ q.label }}</div>
-        <div class="bar" :aria-valuenow="progressPct(q)" aria-valuemin="0" aria-valuemax="100" role="progressbar">
+        <div class="bar" role="progressbar" :aria-valuenow="progressPct(q)" aria-valuemin="0" aria-valuemax="100">
           <div class="fill" :style="{ width: `${progressPct(q)}%` }"></div>
         </div>
         <div class="row">
           <span class="metric">{{ formatMetric(q) }}</span>
           <button
-            class="claim"
+            class="claim-btn"
             :disabled="!q.completed || q.claimed || claiming === q.code"
             @click="handleClaim(q)"
           >
-            <template v-if="q.claimed">Réclamée</template>
-            <template v-else-if="claiming === q.code">…</template>
-            <template v-else-if="q.completed">Réclamer</template>
+            <template v-if="q.claimed">Reclamee</template>
+            <template v-else-if="claiming === q.code">...</template>
+            <template v-else-if="q.completed">Reclamer</template>
             <template v-else>En cours</template>
           </button>
         </div>
       </li>
-      <li v-if="!quests.length && !loading" class="empty">Aucune quête disponible.</li>
+      <li v-if="!quests.length && !loading" class="empty">Aucune quete disponible.</li>
     </ul>
   </aside>
 </template>
@@ -109,61 +111,107 @@ watch(() => props.open, (v) => { if (v) void load() })
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(380px, 90vw);
-  background: rgba(15, 23, 42, 0.94);
-  backdrop-filter: blur(16px);
+  width: min(360px, 90vw);
+  background: #0f0f0f;
+  border-left: 2px solid #c0392b;
   color: white;
-  padding: 20px;
-  overflow-y: auto;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
   z-index: 100;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-h2 { margin: 0; font-size: 18px; }
-.close { background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; }
-.refresh {
-  margin-bottom: 14px; padding: 6px 12px; background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.18); color: white; border-radius: 4px; cursor: pointer; font-size: 13px;
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-.refresh:disabled { opacity: 0.5; cursor: wait; }
-.err { background: #7f1d1d; padding: 8px; border-radius: 4px; }
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.7);
+}
+.close-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+.close-btn:hover { color: white; border-color: rgba(255,255,255,0.3); }
 
-.list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-.quest {
-  padding: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 8px;
+.refresh-btn {
+  margin: 12px 16px 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.5);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+  align-self: flex-start;
 }
-.quest.claimed { opacity: 0.55; }
+.refresh-btn:hover:not(:disabled) { color: white; border-color: rgba(255,255,255,0.3); }
+.refresh-btn:disabled { opacity: 0.4; cursor: wait; }
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quest {
+  padding: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+.quest.claimed { opacity: 0.45; }
 .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .kind {
   font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 2px 6px; border-radius: 3px;
+  padding: 2px 6px;
 }
-.kind.daily  { background: rgba(91, 141, 217, 0.18); color: #93c5fd; }
-.kind.weekly { background: rgba(196, 181, 253, 0.18); color: #c4b5fd; }
-.reward { font-size: 11px; font-weight: 700; color: #fbbf24; }
-.label { font-size: 13px; line-height: 1.35; margin-bottom: 8px; color: white; }
+.kind.daily  { background: rgba(91,141,217,0.15); color: #93c5fd; }
+.kind.weekly { background: rgba(192,57,43,0.15); color: #f87171; }
+.reward { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); font-family: ui-monospace, monospace; }
+.label { font-size: 13px; line-height: 1.4; margin-bottom: 8px; }
 
-.bar {
-  height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 6px;
-}
-.fill {
-  height: 100%;
-  background: linear-gradient(90deg, #93c5fd, #5b8dd9);
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
+.bar { height: 3px; background: rgba(255,255,255,0.06); margin-bottom: 6px; overflow: hidden; }
+.fill { height: 100%; background: #c0392b; transition: width 0.4s ease; }
+
 .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.metric { font-size: 11px; color: rgba(255,255,255,0.6); font-variant-numeric: tabular-nums; }
-.claim {
-  padding: 5px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
-  background: linear-gradient(135deg, #5b8dd9, #4a6fb8); border: 1px solid rgba(147,197,253,0.5); color: white;
-  border-radius: 4px; cursor: pointer; transition: background 0.12s, transform 0.08s;
+.metric { font-size: 11px; color: rgba(255,255,255,0.4); font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.claim-btn {
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #c0392b;
+  border: 1px solid #c0392b;
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
 }
-.claim:hover:not(:disabled) { background: linear-gradient(135deg, #6b9de9, #5a7fc8); }
-.claim:active:not(:disabled) { transform: scale(0.97); }
-.claim:disabled { opacity: 0.4; cursor: not-allowed; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
+.claim-btn:hover:not(:disabled) { background: #a93226; }
+.claim-btn:disabled { opacity: 0.35; cursor: not-allowed; background: transparent; border-color: rgba(255,255,255,0.12); color: rgba(255,255,255,0.35); }
 
-.empty { font-size: 13px; color: rgba(255,255,255,0.5); font-style: italic; padding: 12px; }
+.empty { font-size: 13px; color: rgba(255,255,255,0.3); font-style: italic; padding: 8px; }
+.err { margin: 0 0 8px; padding: 8px; background: rgba(192,57,43,0.15); border: 1px solid rgba(192,57,43,0.3); color: #f87171; font-size: 13px; }
 </style>

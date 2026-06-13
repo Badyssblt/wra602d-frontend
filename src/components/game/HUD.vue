@@ -9,22 +9,14 @@ const props = defineProps<{
   money: number
   population: number
   score: number
-  /** Net €/h (positive = revenue, negative = deficit). */
   netPerHour: number
-  /** Gross €/h (income before maintenance). */
   grossPerHour: number
-  /** Maintenance €/h (negative number when displayed). */
   maintenancePerHour: number
   selectedType: BuildingType
-  /** Next-placement price per building type (dynamic, depends on current city). */
   prices: Record<BuildingType, number>
-  /** Current account level (gates advanced buildings). */
   playerLevel: number
-  /** Accumulated XP across all submitted scores. */
   playerXp: number
-  /** XP threshold for next level, or null if max level reached. */
   xpForNextLevel: number | null
-  /** Prestige tier (shown next to the level when > 0). */
   prestigeLevel: number
   busy: boolean
 }>()
@@ -34,19 +26,15 @@ defineEmits<{
   select: [BuildingType]
   new: []
   save: []
-  load: []
   toggleLeaderboard: []
   toggleQuests: []
   prestige: []
 }>()
 
 const fmt = (n: number) => n.toLocaleString('fr-FR')
-const fmtSigned = (n: number) => `${n >= 0 ? '+' : '−'}${fmt(Math.abs(Math.round(n)))}`
+const fmtSigned = (n: number) => `${n >= 0 ? '+' : '-'}${fmt(Math.abs(Math.round(n)))}`
 
-/** XP at the start of the current level — mirrors ProgressionPolicy.xpForLevel. */
 const previousLevelTarget = computed(() => 150 * props.playerLevel * props.playerLevel)
-
-/** 0–100 % progress toward the next level (or 100 % at max level). */
 const xpProgress = computed(() => {
   if (props.xpForNextLevel === null) return 100
   const span = Math.max(1, props.xpForNextLevel - previousLevelTarget.value)
@@ -57,17 +45,9 @@ const xpProgress = computed(() => {
 
 <template>
   <div class="hud">
-    <!-- City info -->
-    <section class="panel city">
-      <div class="emblem" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-          <path d="M3 21h18" />
-          <path d="M5 21V10l7-5 7 5v11" />
-          <path d="M9 21v-7h6v7" />
-          <circle cx="12" cy="9" r="1" />
-        </svg>
-      </div>
-      <div class="city-text">
+    <!-- City + level -->
+    <section class="panel city-panel">
+      <div class="city-block">
         <input
           :value="cityName"
           class="city-name"
@@ -77,52 +57,49 @@ const xpProgress = computed(() => {
           aria-label="Nom de la ville"
           @input="$emit('update:cityName', ($event.target as HTMLInputElement).value)"
         />
-        <div v-if="username" class="city-meta">par <strong>{{ username }}</strong></div>
-        <div v-if="username" class="xp-row" :title="`${fmt(playerXp)} XP / ${xpForNextLevel === null ? '∞' : fmt(xpForNextLevel)} XP`">
-          <span class="level-badge">
-            Lvl {{ playerLevel }}<span v-if="prestigeLevel > 0" class="prestige">★{{ prestigeLevel }}</span>
-          </span>
-          <button
-            v-if="xpForNextLevel === null"
-            type="button"
-            class="prestige-btn"
-            title="Prestige : reset le niveau contre un bonus permanent de +10 %"
-            @click="$emit('prestige')"
-          >
-            ✦ Prestige
-          </button>
-          <div v-else class="xp-bar" :aria-label="`Progression : ${xpProgress}%`">
-            <div class="xp-fill" :style="{ width: `${xpProgress}%` }"></div>
-          </div>
+        <div v-if="username" class="city-sub">par <strong>{{ username }}</strong></div>
+      </div>
+      <div class="level-block">
+        <div class="level-num">
+          <span class="level-label">Lvl</span>
+          <span class="level-val">{{ playerLevel }}</span>
+          <span v-if="prestigeLevel > 0" class="prestige-star">*{{ prestigeLevel }}</span>
         </div>
+        <div v-if="xpForNextLevel !== null" class="xp-bar" :title="`${fmt(playerXp)} / ${fmt(xpForNextLevel)} XP`">
+          <div class="xp-fill" :style="{ width: `${xpProgress}%` }"></div>
+        </div>
+        <button
+          v-else
+          class="prestige-btn"
+          @click="$emit('prestige')"
+        >Prestige</button>
       </div>
     </section>
 
     <!-- Stats -->
-    <section class="panel stats">
-      <div
-        class="stat money"
-        :title="`Revenu brut : +${fmt(Math.round(grossPerHour))} €/h\nMaintenance : −${fmt(Math.round(maintenancePerHour))} €/h`"
-      >
-        <div class="stat-label">Trésor</div>
-        <div class="stat-value">{{ fmt(money) }} <span class="unit">€</span></div>
-        <div class="stat-rate" :class="{ negative: netPerHour < 0, positive: netPerHour > 0 }">
+    <section class="panel stats-panel">
+      <div class="stat">
+        <div class="stat-label">Tresor</div>
+        <div class="stat-value money">{{ fmt(money) }} <span class="unit">€</span></div>
+        <div class="stat-rate" :class="{ neg: netPerHour < 0, pos: netPerHour > 0 }">
           {{ fmtSigned(netPerHour) }} €/h
         </div>
       </div>
-      <div class="stat pop">
+      <div class="stat-sep"></div>
+      <div class="stat">
         <div class="stat-label">Population</div>
         <div class="stat-value">{{ population }} <span class="unit">hab.</span></div>
       </div>
-      <div class="stat score">
+      <div class="stat-sep"></div>
+      <div class="stat">
         <div class="stat-label">Score</div>
-        <div class="stat-value">{{ fmt(Math.round(score)) }} <span class="unit">pts</span></div>
+        <div class="stat-value score">{{ fmt(Math.round(score)) }} <span class="unit">pts</span></div>
       </div>
     </section>
 
-    <!-- Build toolbar -->
-    <section class="panel build">
-      <div class="panel-title">Construction</div>
+    <!-- Building toolbar -->
+    <section class="panel build-panel">
+      <div class="build-label">Construction</div>
       <BuildingToolbar
         :selected="selectedType"
         :prices="prices"
@@ -132,25 +109,33 @@ const xpProgress = computed(() => {
     </section>
 
     <!-- Actions -->
-    <section class="panel actions">
-      <button :disabled="busy" title="Supprimer la partie en cours et recommencer" @click="$emit('new')">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
+    <section class="panel actions-panel">
+      <button :disabled="busy" title="Reinitialiser la ville" @click="$emit('new')">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+        </svg>
         <span>Recommencer</span>
       </button>
-      <button :disabled="busy" title="Sauvegarder (envoie aussi le score)" @click="$emit('save')">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></svg>
+      <button :disabled="busy" title="Sauvegarder manuellement" @click="$emit('save')">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/>
+          <path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/>
+        </svg>
         <span>Sauvegarder</span>
       </button>
-      <button :disabled="busy" title="Charger une ville" @click="$emit('load')">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H3Z" /></svg>
-        <span>Charger</span>
+      <button class="ghost" title="Quetes du jour" @click="$emit('toggleQuests')">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3 7-7"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        <span>Quetes</span>
       </button>
-      <button class="ghost" title="Quêtes du jour" @click="$emit('toggleQuests')">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 7-7" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
-        <span>Quêtes</span>
-      </button>
-      <button class="ghost" title="Voir le classement" @click="$emit('toggleLeaderboard')">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v6a5 5 0 0 1-10 0Z" /><path d="M17 4h3v3a3 3 0 0 1-3 3" /><path d="M7 4H4v3a3 3 0 0 0 3 3" /></svg>
+      <button class="ghost" title="Classement" @click="$emit('toggleLeaderboard')">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 21h8"/><path d="M12 17v4"/>
+          <path d="M7 4h10v6a5 5 0 0 1-10 0Z"/>
+          <path d="M17 4h3v3a3 3 0 0 1-3 3"/><path d="M7 4H4v3a3 3 0 0 0 3 3"/>
+        </svg>
         <span>Classement</span>
       </button>
     </section>
@@ -165,223 +150,114 @@ const xpProgress = computed(() => {
   right: 0;
   display: flex;
   align-items: stretch;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 1px;
+  background: rgba(255,255,255,0.06);
   pointer-events: none;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: white;
 }
 
 .panel {
   pointer-events: auto;
+  background: #0f0f0f;
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 10px 16px;
-  background: linear-gradient(180deg, rgba(11, 18, 32, 0.78), rgba(7, 11, 22, 0.88));
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  color: white;
+  border-top: 2px solid transparent;
 }
 
-/* ===== City panel ===== */
-.city { min-width: 240px; }
-.emblem {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(91, 141, 217, 0.25), rgba(91, 141, 217, 0.05));
-  border: 1px solid rgba(91, 141, 217, 0.4);
-  color: #93c5fd;
-  flex-shrink: 0;
-}
-.city-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  flex: 1;
-}
+/* ── City panel ── */
+.city-panel { min-width: 220px; flex-direction: column; align-items: flex-start; gap: 8px; border-top-color: #c0392b; }
+.city-block { width: 100%; }
 .city-name {
   background: transparent;
   border: none;
-  border-bottom: 1px dashed transparent;
+  border-bottom: 1px solid transparent;
   color: white;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 1px 2px;
+  letter-spacing: 0.01em;
+  padding: 1px 0;
   width: 100%;
   font-family: inherit;
   text-transform: uppercase;
 }
-.city-name:hover { border-bottom-color: rgba(255, 255, 255, 0.15); }
-.city-name:focus {
-  outline: none;
-  border-bottom-color: rgba(147, 197, 253, 0.6);
-}
-.city-meta {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
-  letter-spacing: 0.04em;
-}
-.city-meta strong { color: rgba(255, 255, 255, 0.85); font-weight: 500; }
+.city-name:hover { border-bottom-color: rgba(255,255,255,0.2); }
+.city-name:focus { outline: none; border-bottom-color: #c0392b; }
+.city-sub { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 1px; }
+.city-sub strong { color: rgba(255,255,255,0.7); font-weight: 500; }
 
-/* ===== XP / level row ===== */
-.xp-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 2px;
-}
-.level-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #c4b5fd;
-  padding: 2px 6px;
-  background: rgba(196, 181, 253, 0.12);
-  border: 1px solid rgba(196, 181, 253, 0.3);
-  border-radius: 4px;
-  white-space: nowrap;
-}
-.prestige {
-  font-size: 9px;
-  color: #fbbf24;
-  margin-left: 2px;
-}
-.xp-bar {
-  flex: 1;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  overflow: hidden;
-  min-width: 60px;
-}
-.xp-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #c4b5fd, #a78bfa);
-  border-radius: 2px;
-  transition: width 0.4s ease;
-}
+.level-block { width: 100%; display: flex; align-items: center; gap: 8px; }
+.level-num { display: flex; align-items: baseline; gap: 3px; flex-shrink: 0; }
+.level-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.3); }
+.level-val { font-size: 14px; font-weight: 900; color: white; font-family: ui-monospace, monospace; }
+.prestige-star { font-size: 10px; color: #c0392b; margin-left: 1px; font-weight: 700; }
+
+.xp-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.xp-fill { height: 100%; background: #c0392b; transition: width 0.4s ease; }
 .prestige-btn {
-  flex: 1;
-  padding: 3px 8px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.4);
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.12s, transform 0.08s;
+  flex: 1; padding: 3px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #c0392b; background: transparent; border: 1px solid #c0392b; cursor: pointer; font-family: inherit;
+  transition: background 0.1s;
 }
-.prestige-btn:hover {
-  background: rgba(251, 191, 36, 0.2);
-}
-.prestige-btn:active {
-  transform: scale(0.97);
-}
+.prestige-btn:hover { background: rgba(192,57,43,0.12); }
 
-/* ===== Stats panel ===== */
-.stats { gap: 22px; }
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border-left: 2px solid rgba(255, 255, 255, 0.1);
-  padding-left: 12px;
-}
-.stat:first-child { border-left: none; padding-left: 0; }
-.stat-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
-}
-.stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-.stat-value .unit { font-size: 12px; font-weight: 500; opacity: 0.6; margin-left: 2px; }
-.stat-rate {
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  margin-top: 1px;
-  color: rgba(255, 255, 255, 0.5);
-}
-.stat-rate.positive { color: #4ade80; }
-.stat-rate.negative { color: #f87171; }
-.stat.money .stat-value { color: #fbbf24; }
-.stat.pop   .stat-value { color: #93c5fd; }
-.stat.score .stat-value { color: #c4b5fd; }
-.stat.pop   { border-color: rgba(147, 197, 253, 0.3); }
-.stat.score { border-color: rgba(196, 181, 253, 0.3); }
+/* ── Stats panel ── */
+.stats-panel { gap: 0; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 0 16px; }
+.stat:first-child { padding-left: 0; }
+.stat-sep { width: 1px; height: 36px; background: rgba(255,255,255,0.08); flex-shrink: 0; }
+.stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.4); }
+.stat-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-family: ui-monospace, monospace; }
+.stat-value .unit { font-size: 11px; font-weight: 500; opacity: 0.5; }
+.stat-value.money { color: #fbbf24; }
+.stat-value.score { color: #c0392b; }
+.stat-rate { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; color: rgba(255,255,255,0.35); }
+.stat-rate.pos { color: #4ade80; }
+.stat-rate.neg { color: #f87171; }
 
-/* ===== Build panel ===== */
-.build { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 12px; }
-.panel-title {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.45);
-  margin-left: 2px;
-}
+/* ── Build panel ── */
+.build-panel { flex-direction: column; align-items: flex-start; gap: 5px; padding: 8px 12px; }
+.build-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em; color: rgba(255,255,255,0.3); font-weight: 700; }
 
-/* ===== Actions panel ===== */
-.actions { gap: 6px; padding: 8px; }
-.actions button {
+/* ── Actions panel ── */
+.actions-panel { gap: 4px; padding: 8px; margin-left: auto; }
+.actions-panel button {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  width: 64px;
-  height: 56px;
+  gap: 3px;
+  width: 60px;
+  height: 54px;
   padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.7);
   font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.08s;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
 }
-.actions button svg { color: rgba(147, 197, 253, 0.9); }
-.actions button:hover:not(:disabled) {
-  background: rgba(91, 141, 217, 0.12);
-  border-color: rgba(91, 141, 217, 0.4);
+.actions-panel button svg { color: rgba(255,255,255,0.6); }
+.actions-panel button:hover:not(:disabled) {
+  background: rgba(192,57,43,0.12);
+  border-color: rgba(192,57,43,0.4);
   color: white;
 }
-.actions button:active:not(:disabled) { transform: scale(0.96); }
-.actions button:disabled { opacity: 0.4; cursor: not-allowed; }
-.actions button.ghost { background: transparent; }
-.actions button.ghost svg { color: rgba(196, 181, 253, 0.9); }
+.actions-panel button:hover:not(:disabled) svg { color: #c0392b; }
+.actions-panel button:active:not(:disabled) { opacity: 0.8; }
+.actions-panel button:disabled { opacity: 0.3; cursor: not-allowed; }
+.actions-panel button.ghost { background: transparent; border-color: rgba(255,255,255,0.05); }
 
 @media (max-width: 1100px) {
-  .actions button span { display: none; }
-  .actions button { width: 44px; }
-  .panel { padding: 8px 10px; }
+  .actions-panel button span { display: none; }
+  .actions-panel button { width: 42px; }
+  .stats-panel .stat { padding: 0 10px; }
+  .stat-value { font-size: 17px; }
 }
 </style>

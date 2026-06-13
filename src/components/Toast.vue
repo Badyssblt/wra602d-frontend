@@ -12,14 +12,24 @@ const { current } = useToast()
 
 <style scoped>
 .toast {
-  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-  padding: 10px 16px; border-radius: 8px; color: white; font-size: 14px;
-  z-index: 110; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.02em;
+  z-index: 200;
+  white-space: nowrap;
+  border: 1px solid rgba(255,255,255,0.15);
 }
-.toast-info { background: #2b6cb0; }
-.toast-success { background: #059669; }
-.toast-error { background: #dc2626; }
+.toast-info    { background: #1d4ed8; }
+.toast-success { background: #166534; }
+.toast-error   { background: #c0392b; }
 
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

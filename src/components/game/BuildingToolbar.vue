@@ -6,9 +6,7 @@ import BuildingIcon from './BuildingIcon.vue'
 
 const props = defineProps<{
   selected: BuildingType
-  /** Next-placement price per type, recomputed each tick (quadratic curve). */
   prices: Record<BuildingType, number>
-  /** Player's current account level — gates advanced buildings. */
   playerLevel: number
 }>()
 defineEmits<{ select: [BuildingType] }>()
@@ -59,20 +57,15 @@ function isLocked(unlockLevel: number): boolean {
       :disabled="isLocked(item.unlockLevel)"
       :title="
         isLocked(item.unlockLevel)
-          ? `${item.label} — débloqué au niveau ${item.unlockLevel}`
+          ? `${item.label} — niveau ${item.unlockLevel} requis`
           : `${item.label} — ${fmt(prices[item.type])} €`
-      "
-      :aria-label="
-        isLocked(item.unlockLevel)
-          ? `${item.label}, verrouillé, niveau ${item.unlockLevel} requis`
-          : `${item.label}, ${fmt(prices[item.type])} euros`
       "
       :aria-pressed="selected === item.type"
       @click="!isLocked(item.unlockLevel) && $emit('select', item.type)"
     >
       <BuildingIcon :type="item.type" />
-      <span v-if="isLocked(item.unlockLevel)" class="lock">Lvl {{ item.unlockLevel }}</span>
-      <span v-else class="price">{{ fmt(prices[item.type]) }} €</span>
+      <span v-if="isLocked(item.unlockLevel)" class="sub">Lvl {{ item.unlockLevel }}</span>
+      <span v-else class="sub">{{ fmt(prices[item.type]) }}</span>
     </button>
   </div>
 </template>
@@ -81,11 +74,7 @@ function isLocked(unlockLevel: number): boolean {
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
+  gap: 4px;
 }
 .btn {
   position: relative;
@@ -94,47 +83,37 @@ function isLocked(unlockLevel: number): boolean {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
-  border: 2px solid transparent;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.65);
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 2px solid transparent;
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.55);
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.08s;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
 }
 .btn:hover:not(.locked) {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
-}
-.btn:active:not(.locked) {
-  transform: scale(0.95);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.9);
+  border-color: rgba(255,255,255,0.15);
+  border-bottom-color: var(--accent);
 }
 .btn.active {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  border-color: var(--accent);
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+  border-bottom-color: var(--accent);
   color: var(--accent);
 }
 .btn.locked {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
-  color: rgba(255, 255, 255, 0.45);
 }
-.price {
-  font-size: 10px;
+.sub {
+  font-size: 9px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255,255,255,0.4);
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
-.btn.active .price {
-  color: var(--accent);
-}
-.lock {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
-}
+.btn.active .sub { color: var(--accent); opacity: 0.8; }
 </style>

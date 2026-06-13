@@ -39,14 +39,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(email: string, pseudonym: string, password: string): Promise<void> {
+  async function register(email: string, pseudonym: string, password: string, cityName: string): Promise<void> {
     loading.value = true
     error.value = null
     try {
-      await authApi.register({ email, pseudonym, password })
+      await authApi.register({ email, pseudonym, password, cityName })
       await login(email, password)
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Échec d’inscription'
+      error.value = e instanceof Error ? e.message : "Echec d’inscription"
       throw e
     } finally {
       loading.value = false

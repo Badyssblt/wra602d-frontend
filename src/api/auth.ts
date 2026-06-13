@@ -2,7 +2,7 @@ import { api } from './client'
 import type { AuthUser, LoginResponse } from './types'
 
 export const authApi = {
-  register(payload: { email: string; pseudonym: string; password: string }): Promise<AuthUser> {
+  register(payload: { email: string; pseudonym: string; password: string; cityName: string }): Promise<AuthUser> {
     return api.post('/api/users/register', payload, { auth: false, contentType: 'application/json' })
   },
 

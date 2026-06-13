@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import type { BuildingType } from '../../types'
 import { useGame } from '../../composables/useGame'
 import { useCityPersistence } from '../../composables/useCityPersistence'
@@ -8,7 +8,6 @@ import LeaderboardPanel from '../LeaderboardPanel.vue'
 import TopBar from './TopBar.vue'
 import HUD from './HUD.vue'
 import DemandPanel from './DemandPanel.vue'
-import LoadCityDialog from './LoadCityDialog.vue'
 import Hint from './Hint.vue'
 import WaveBanner from './WaveBanner.vue'
 import GameOverOverlay from './GameOverOverlay.vue'
@@ -21,7 +20,6 @@ const auth = useAuthStore()
 const selectedType = ref<BuildingType>('house')
 const showLeaderboard = ref(false)
 const showQuests = ref(false)
-const showLoadDialog = ref(false)
 
 const playerLevel = computed(() => auth.user?.level ?? 0)
 const playerXp = computed(() => auth.user?.xp ?? 0)
@@ -42,44 +40,47 @@ const busy = computed(() => persistence.busy.value)
 
 const { notify } = useToast()
 
-onMounted(() => start())
+let autoSaveInterval: ReturnType<typeof setInterval> | null = null
 
-/**
- * "Nouvelle partie" in the 1-city-per-account model:
- *  - confirm,
- *  - DELETE the current city on the server (404-safe — first run has no server city yet),
- *  - reset the local state.
- */
+onMounted(async () => {
+  start()
+  await persistence.autoLoad()
+  autoSaveInterval = setInterval(() => {
+    if (!persistence.busy.value) {
+      persistence.save()
+    }
+  }, 60_000)
+})
+
+onBeforeUnmount(() => {
+  if (autoSaveInterval !== null) {
+    clearInterval(autoSaveInterval)
+    autoSaveInterval = null
+  }
+})
+
 async function handleNew(): Promise<void> {
-  if (!confirm('Supprimer la partie en cours et en démarrer une nouvelle ? Cette action est définitive.')) return
+  if (!confirm('Reinitialiser la ville et repartir a zero ? Cette action est definitive.')) return
+  const currentName = cityName.value
   try {
     await citiesApi.remove(cityUid.value)
   } catch {
     /* No server city yet (404) — that's fine. */
   }
   newGame()
-}
-
-async function handleLoadOpen(): Promise<void> {
-  await persistence.fetchList()
-  showLoadDialog.value = true
-}
-
-async function handleLoad(uid: string): Promise<void> {
-  await persistence.load(uid)
-  showLoadDialog.value = false
+  cityName.value = currentName
 }
 
 async function handlePrestige(): Promise<void> {
-  if (!confirm('Prestiger réinitialisera votre niveau à 0 en échange d’un bonus permanent de +10 % sur les scores et l’XP des quêtes. Continuer ?')) {
+  if (!confirm('Prestiger reinitalisera votre niveau a 0 en echange d\'un bonus permanent de +10 % sur les scores et l\'XP des quetes. Continuer ?')) {
     return
   }
   try {
     const result = await authApi.prestige()
-    notify(`Prestige ${result.prestigeLevel} — multiplicateur ×${result.multiplier.toFixed(2)}`, 'success')
+    notify(`Prestige ${result.prestigeLevel} — multiplicateur x${result.multiplier.toFixed(2)}`, 'success')
     await auth.refresh()
   } catch (e) {
-    notify(e instanceof Error ? e.message : 'Échec du prestige', 'error')
+    notify(e instanceof Error ? e.message : 'Echec du prestige', 'error')
   }
 }
 </script>
@@ -90,7 +91,7 @@ async function handlePrestige(): Promise<void> {
 
     <TopBar :username="auth.user?.pseudonym ?? null" @logout="auth.logout()" />
 
-    <Hint message="Clic pour poser · Clic sur un incident pour réparer · Sauvegarder envoie le score" />
+    <Hint message="Clic pour poser · Clic sur un incident pour reparer · Sauvegarde automatique toutes les 60s" />
 
     <DemandPanel :demand="demand" />
 
@@ -116,18 +117,9 @@ async function handlePrestige(): Promise<void> {
       @select="selectedType = $event"
       @new="handleNew"
       @save="persistence.save()"
-      @load="handleLoadOpen"
       @toggle-leaderboard="showLeaderboard = !showLeaderboard"
       @toggle-quests="showQuests = !showQuests"
       @prestige="handlePrestige"
-    />
-
-    <LoadCityDialog
-      v-if="showLoadDialog"
-      :cities="persistence.myCities.value"
-      :busy="busy"
-      @load="handleLoad"
-      @close="showLoadDialog = false"
     />
 
     <LeaderboardPanel :open="showLeaderboard" @close="showLeaderboard = false" />

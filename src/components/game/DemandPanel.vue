@@ -7,13 +7,12 @@ defineProps<{ demand: DemandState }>()
 interface Row {
   zone: DemandZone
   letter: string
-  shortLabel: string
 }
 
 const ROWS: Row[] = [
-  { zone: 'residential', letter: 'R', shortLabel: 'Hab.' },
-  { zone: 'commercial',  letter: 'C', shortLabel: 'Cmrc.' },
-  { zone: 'industrial',  letter: 'I', shortLabel: 'Ind.' },
+  { zone: 'residential', letter: 'R' },
+  { zone: 'commercial',  letter: 'C' },
+  { zone: 'industrial',  letter: 'I' },
 ]
 </script>
 
@@ -25,15 +24,9 @@ const ROWS: Row[] = [
         class="badge"
         :style="{ background: DEMAND_COLORS[row.zone] }"
         :title="DEMAND_LABELS[row.zone]"
-        :aria-label="DEMAND_LABELS[row.zone]"
-      >
-        {{ row.letter }}
-      </div>
+      >{{ row.letter }}</div>
       <div class="track">
-        <div
-          class="fill"
-          :style="{ width: demand[row.zone] + '%', background: DEMAND_COLORS[row.zone] }"
-        />
+        <div class="fill" :style="{ width: demand[row.zone] + '%', background: DEMAND_COLORS[row.zone] }" />
       </div>
       <div class="value">{{ Math.round(demand[row.zone]) }}</div>
     </div>
@@ -43,66 +36,59 @@ const ROWS: Row[] = [
 <style scoped>
 .demand {
   position: absolute;
-  left: 14px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 14px;
-  width: 200px;
-  background: linear-gradient(180deg, rgba(11, 18, 32, 0.78), rgba(7, 11, 22, 0.88));
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-top-color: rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  padding: 10px 12px;
+  width: 180px;
+  background: #0f0f0f;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-left: 2px solid #c0392b;
   color: white;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   z-index: 40;
 }
 .title {
-  font-size: 10px;
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.35);
+  font-weight: 700;
   margin-bottom: 2px;
 }
 .row {
   display: grid;
-  grid-template-columns: 22px 1fr 26px;
+  grid-template-columns: 20px 1fr 24px;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 .badge {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.7);
-  letter-spacing: 0;
+  color: rgba(0,0,0,0.75);
 }
 .track {
   position: relative;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 4px;
+  height: 5px;
+  background: rgba(255,255,255,0.06);
   overflow: hidden;
 }
 .fill {
   height: 100%;
-  border-radius: 4px;
   transition: width 0.3s ease;
-  box-shadow: 0 0 8px var(--accent, rgba(255, 255, 255, 0.2));
 }
 .value {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255,255,255,0.5);
   text-align: right;
+  font-family: ui-monospace, monospace;
 }
 </style>
